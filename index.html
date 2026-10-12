@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seu Nome · Portfólio</title>
+  <meta name="description" content="Portfólio de Seu Nome — desenvolvimento front-end e design de interfaces." data-i18n-attr="content:meta.description">
+  <meta name="theme-color" content="#0d6ccb">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;0,6..12,900;1,6..12,800;1,6..12,900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-view="home">
+
+  <!-- ====== Fundo: água (WebGL) + reflexo + bolhas ====== -->
+  <canvas id="water" aria-hidden="true"></canvas>
+  <div class="flare" aria-hidden="true"></div>
+  <canvas id="bubbles" aria-hidden="true"></canvas>
+
+  <!-- ====== Definições SVG: líquido, ondas, distorção ====== -->
+  <svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="liquidFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#d4fbff"/>
+        <stop offset=".45" stop-color="#63d8ff"/>
+        <stop offset="1" stop-color="#1494e6"/>
+      </linearGradient>
+      <linearGradient id="liquidGloss" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#fff" stop-opacity=".05"/>
+      </linearGradient>
+
+      <!-- "goo": funde as gotas num líquido e aplica brilho especular -->
+      <filter id="goo" x="-30%" y="-80%" width="160%" height="260%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
+        <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -11" result="goo"/>
+        <feGaussianBlur in="goo" stdDeviation="3" result="soft"/>
+        <feSpecularLighting in="soft" surfaceScale="5" specularConstant="1.1" specularExponent="30" lighting-color="#ffffff" result="spec">
+          <feDistantLight azimuth="235" elevation="35"/>
+        </feSpecularLighting>
+        <feComposite in="spec" in2="goo" operator="in" result="specIn"/>
+        <feComposite in="goo" in2="specIn" operator="arithmetic" k1="0" k2="1" k3=".9" k4="0"/>
+      </filter>
+      <filter id="goo-sm" x="-30%" y="-80%" width="160%" height="260%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+        <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10" result="goo"/>
+        <feGaussianBlur in="goo" stdDeviation="2" result="soft"/>
+        <feSpecularLighting in="soft" surfaceScale="4" specularConstant="1" specularExponent="30" lighting-color="#ffffff" result="spec">
+          <feDistantLight azimuth="235" elevation="35"/>
+        </feSpecularLighting>
+        <feComposite in="spec" in2="goo" operator="in" result="specIn"/>
+        <feComposite in="goo" in2="specIn" operator="arithmetic" k1="0" k2="1" k3=".9" k4="0"/>
+      </filter>
+
+      <!-- distorção aquosa usada na entrada dos títulos -->
+      <filter id="wobble" x="-20%" y="-40%" width="140%" height="180%">
+        <feTurbulence id="wobble-turb" type="fractalNoise" baseFrequency="0.012 0.06" numOctaves="2" seed="3" result="n"/>
+        <feDisplacementMap id="wobble-disp" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+
+      <!-- camadas da onda de transição -->
+      <linearGradient id="wave0" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#effdff" stop-opacity=".96"/>
+        <stop offset="1" stop-color="#a6ecff" stop-opacity=".92"/>
+      </linearGradient>
+      <linearGradient id="wave1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#95ebff"/>
+        <stop offset=".5" stop-color="#2dbdf2"/>
+        <stop offset="1" stop-color="#1186d8"/>
+      </linearGradient>
+      <linearGradient id="wave2" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#55d4ff"/>
+        <stop offset=".22" stop-color="#1693e3"/>
+        <stop offset="1" stop-color="#042f72"/>
+      </linearGradient>
+
+      <!-- relógio -->
+      <radialGradient id="clockFace" cx=".5" cy=".38" r=".7">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset=".7" stop-color="#e2f6ff"/>
+        <stop offset="1" stop-color="#9fd8f5"/>
+      </radialGradient>
+      <linearGradient id="clockGloss" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- ====== Topo ====== -->
+  <header class="topbar">
+    <a class="brand" href="#" data-nav="home" aria-label="Início" data-i18n-attr="aria-label:ui.home">
+      <span class="orb brand-orb" aria-hidden="true"></span>
+      <span class="brand-name"><span data-name>Seu Nome</span><small data-i18n="meta.portfolio">Portfólio</small></span>
+    </a>
+
+    <nav class="tabbar" aria-label="Seções" data-i18n-attr="aria-label:ui.sections">
+      <div class="tabbar-inner glass">
+        <svg class="liquid-layer" aria-hidden="true"><g class="liquid-g" filter="url(#goo-sm)"></g><rect class="liquid-gloss" fill="url(#liquidGloss)"/></svg>
+        <a class="tab" href="#sobre" data-nav="sobre" data-i18n="nav.sobre">Sobre</a>
+        <a class="tab" href="#projetos" data-nav="projetos" data-i18n="nav.projetos">Projetos</a>
+        <a class="tab" href="#habilidades" data-nav="habilidades" data-i18n="nav.habilidades">Habilidades</a>
+        <a class="tab" href="#contato" data-nav="contato" data-i18n="nav.contato">Contato</a>
+      </div>
+    </nav>
+
+    <div class="top-tools">
+      <div class="lang-switch glass" role="group" aria-label="Idioma" data-i18n-attr="aria-label:ui.lang">
+        <svg class="liquid-layer" aria-hidden="true"><g class="liquid-g" filter="url(#goo-sm)"></g><rect class="liquid-gloss" fill="url(#liquidGloss)"/></svg>
+        <button class="lang-opt" type="button" data-lang="pt" lang="pt-BR" aria-pressed="true" title="Português">PT</button>
+        <button class="lang-opt" type="button" data-lang="en" lang="en" aria-pressed="false" title="English">EN</button>
+        <button class="lang-opt" type="button" data-lang="ja" lang="ja" aria-pressed="false" title="日本語">日本</button>
+      </div>
+      <button class="icon-orb" id="sound-toggle" type="button" aria-pressed="false" aria-label="Ativar sons">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9h4l5-4v14l-5-4H4z"/>
+          <path class="waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>
+          <path class="mute" d="M17 9.5l5 5M22 9.5l-5 5"/>
+        </svg>
+      </button>
+      <div class="gadget glass" aria-hidden="true">
+        <svg class="clock" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="47" fill="url(#clockFace)" stroke="#fff" stroke-width="2"/>
+          <circle cx="50" cy="50" r="47" fill="none" stroke="rgba(0,70,140,.35)" stroke-width="1"/>
+          <g class="clock-ticks"></g>
+          <line id="h-hour" x1="50" y1="54" x2="50" y2="29" stroke="#063b74" stroke-width="5" stroke-linecap="round"/>
+          <line id="h-min" x1="50" y1="56" x2="50" y2="15" stroke="#0b5aa6" stroke-width="3" stroke-linecap="round"/>
+          <line id="h-sec" x1="50" y1="60" x2="50" y2="12" stroke="#ff5b3a" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="4" fill="#063b74"/>
+          <ellipse cx="50" cy="29" rx="35" ry="21" fill="url(#clockGloss)" opacity=".75"/>
+        </svg>
+        <div class="gadget-time"><span id="clock-time">00:00</span><small id="clock-date">—</small></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ================= HOME / MENU ================= -->
+    <section class="view view-home" data-view="home" aria-label="Menu principal">
+      <div class="float-orb" data-depth="70" style="right:7%;top:15%;width:120px;height:120px"><i class="orb"></i></div>
+      <div class="float-orb" data-depth="40" style="right:37%;bottom:9%;width:68px;height:68px"><i class="orb orb--green" style="animation-delay:-2s"></i></div>
+      <div class="float-orb" data-depth="95" style="right:30%;top:21%;width:36px;height:36px"><i class="orb" style="animation-delay:-4s"></i></div>
+
+      <div class="watermark" aria-hidden="true"><span>Sobre</span></div>
+
+      <div class="menu-wrap" data-depth="-14">
+        <nav class="p-menu" aria-label="Menu" data-i18n-attr="aria-label:ui.menu">
+          <div class="p-band" aria-hidden="true"><i class="p-band-shine"></i></div>
+          <svg class="liquid-layer" aria-hidden="true"><g class="liquid-g" filter="url(#goo)"></g><rect class="liquid-gloss" fill="url(#liquidGloss)"/></svg>
+          <ul class="p-list">
+            <li style="--i:0"><a class="p-item" href="#sobre" data-nav="sobre"><span class="p-num">01</span><span class="p-label" data-split data-i18n="nav.sobre">Sobre</span><span class="p-sub" data-i18n="menu.sobre">quem sou eu</span></a></li>
+            <li style="--i:1"><a class="p-item" href="#projetos" data-nav="projetos"><span class="p-num">02</span><span class="p-label" data-split data-i18n="nav.projetos">Projetos</span><span class="p-sub" data-i18n="menu.projetos">o que eu criei</span></a></li>
+            <li style="--i:2"><a class="p-item" href="#habilidades" data-nav="habilidades"><span class="p-num">03</span><span class="p-label" data-split data-i18n="nav.habilidades">Habilidades</span><span class="p-sub" data-i18n="menu.habilidades">minhas ferramentas</span></a></li>
+            <li style="--i:3"><a class="p-item" href="#contato" data-nav="contato"><span class="p-num">04</span><span class="p-label" data-split data-i18n="nav.contato">Contato</span><span class="p-sub" data-i18n="menu.contato">vamos conversar</span></a></li>
+          </ul>
+          <div class="p-desc" aria-hidden="true"><span class="p-desc-key">▸</span><span class="p-desc-text">quem sou eu</span></div>
+        </nav>
+      </div>
+
+      <div class="hero" data-depth="10">
+        <div class="glass hero-card" data-reveal style="--d:2">
+          <span class="eyebrow"><i class="status-dot"></i><span data-i18n="hero.status">Disponível para projetos</span></span>
+          <h1 data-i18n-html="hero.title">Olá, eu sou<br>Seu Nome</h1>
+          <p class="role" data-i18n="hero.role">Desenvolvedor(a) Front-end &amp; Designer de Interfaces</p>
+          <p class="lead" data-i18n="hero.lead">Crio experiências digitais leves, brilhantes e cheias de movimento — onde cada clique parece água e cada tela respira céu azul.</p>
+          <div class="btn-row">
+            <a class="aero-btn" href="#projetos" data-nav="projetos">
+              <span data-i18n="hero.cta1">Ver projetos</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a class="aero-btn aero-btn--green" href="#contato" data-nav="contato" data-i18n="hero.cta2">Fale comigo</a>
+          </div>
+        </div>
+        <p class="hint" data-reveal style="--d:4"><kbd>↑</kbd><kbd>↓</kbd> <span data-i18n="hint.nav">navegar</span> <kbd>Enter</kbd> <span data-i18n="hint.open">abrir</span> <kbd>Esc</kbd> <span data-i18n="hint.back">voltar · clique nas bolhas!</span></p>
+      </div>
+    </section>
+
+    <!-- ================= SOBRE ================= -->
+    <section class="view view-page" id="sobre" data-view="sobre" data-title="Sobre" aria-labelledby="t-sobre">
+      <div class="page">
+        <div class="page-head">
+          <button class="back-orb" type="button" data-back aria-label="Voltar ao menu" data-i18n-attr="aria-label:ui.back">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H6M11 6l-6 6 6 6"/></svg>
+          </button>
+          <h2 class="page-title" id="t-sobre" tabindex="-1"><span class="page-num">01</span><span data-split data-i18n="nav.sobre">Sobre</span></h2>
+        </div>
+
+        <div class="about">
+          <aside class="glass card-pad profile" data-reveal style="--d:0">
+            <div class="avatar"><span class="orb" data-initials>SN</span></div>
+            <h3 data-name>Seu Nome</h3>
+            <p class="muted" data-i18n="about.role">Front-end &amp; UI Designer</p>
+            <ul class="meta">
+              <li><span class="orb" aria-hidden="true"></span><span data-i18n="about.meta1">Brasil · remoto</span></li>
+              <li><span class="orb orb--green" aria-hidden="true"></span><span data-i18n="about.meta2">Aberto(a) a freelas e vagas</span></li>
+              <li><span class="orb" aria-hidden="true"></span><span data-i18n="about.meta3">Português · Inglês</span></li>
+            </ul>
+          </aside>
+
+          <div class="about-main">
+            <div class="glass card-pad" data-reveal style="--d:1">
+              <p class="section-label" data-i18n="about.label">Um pouco sobre mim</p>
+              <p data-i18n="about.p1">Sou apaixonado(a) por interfaces que dão vontade de tocar. Cresci olhando para papéis de parede com bolhas, céus impossíveis e botões de vidro — e hoje transformo essa nostalgia em produtos modernos, rápidos e acessíveis.</p>
+              <p data-i18n="about.p2">Gosto de trabalhar no ponto onde design e código se encontram: protótipos, animações, sistemas de componentes e aquele detalhe de movimento que faz a pessoa sorrir sem saber por quê.</p>
+            </div>
+
+            <div class="stats">
+              <div class="glass stat" data-reveal style="--d:2"><strong><span data-count="4">4</span>+</strong><span data-i18n="about.stat1">anos de experiência</span></div>
+              <div class="glass stat" data-reveal style="--d:3"><strong data-count="32">32</strong><span data-i18n="about.stat2">projetos entregues</span></div>
+              <div class="glass stat" data-reveal style="--d:4"><strong data-count="1500">1500</strong><span data-i18n="about.stat3">xícaras de café</span></div>
+            </div>
+
+            <div class="glass card-pad" data-reveal style="--d:5">
+              <p class="section-label" data-i18n="about.journey">Trajetória</p>
+              <ol class="timeline">
+                <li><time>2026</time><h4 data-i18n="tl1.title">Freelancer · Front-end &amp; UI</h4><p data-i18n="tl1.text">Sites, landing pages e apps com foco em experiência e movimento.</p></li>
+                <li><time>2024</time><h4 data-i18n="tl2.title">Desenvolvedor(a) Front-end · Estúdio Exemplo</h4><p data-i18n="tl2.text">Design system, animações e performance para produtos com milhares de usuários.</p></li>
+                <li><time>2022</time><h4 data-i18n="tl3.title">Primeiros passos</h4><p data-i18n="tl3.text">Comecei recriando interfaces do Windows Vista em HTML e CSS — e nunca mais parei.</p></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PROJETOS ================= -->
+    <section class="view view-page" id="projetos" data-view="projetos" data-title="Projetos" aria-labelledby="t-projetos">
+      <div class="page">
+        <div class="page-head">
+          <button class="back-orb" type="button" data-back aria-label="Voltar ao menu" data-i18n-attr="aria-label:ui.back">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H6M11 6l-6 6 6 6"/></svg>
+          </button>
+          <h2 class="page-title" id="t-projetos" tabindex="-1"><span class="page-num">02</span><span data-split data-i18n="nav.projetos">Projetos</span></h2>
+        </div>
+
+        <div class="projects">
+          <article class="glass project" data-reveal style="--d:0">
+            <div class="thumb" style="--c1:#5ee0ff;--c2:#0a5fc2">
+              <span class="t-bub" style="--x:14%;--y:58%;--s:18px"></span><span class="t-bub" style="--x:80%;--y:22%;--s:12px;--dl:-2s"></span><span class="t-bub" style="--x:70%;--y:66%;--s:24px;--dl:-4s"></span>
+              <span class="orb t-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c3-5 9-6 13-2l5-3-1 5 1 5-5-3c-4 4-10 3-13-2z"/><circle cx="8" cy="11" r=".8"/></svg></span>
+            </div>
+            <div class="project-body">
+              <h3>Aquário Digital</h3>
+              <p data-i18n="proj1.text">Experiência interativa de um aquário em WebGL, com peixes que seguem o cursor e luz cáustica em tempo real.</p>
+              <ul class="tags"><li>WebGL</li><li>Three.js</li><li>GLSL</li></ul>
+              <div class="project-actions"><a class="aero-btn aero-btn--sm" href="#" data-i18n="proj.view">Ver projeto</a><a class="aero-btn aero-btn--sm aero-btn--glass" href="#" data-i18n="proj.code">Código</a></div>
+            </div>
+            <span class="shine" aria-hidden="true"></span>
+          </article>
+
+          <article class="glass project" data-reveal style="--d:1">
+            <div class="thumb" style="--c1:#9fe8ff;--c2:#2d9ae6">
+              <span class="t-hill"></span>
+              <span class="t-bub" style="--x:20%;--y:20%;--s:14px;--dl:-1s"></span><span class="t-bub" style="--x:84%;--y:40%;--s:20px;--dl:-3s"></span>
+              <span class="orb orb--green t-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19C5 9 12 4 20 4c0 8-5 15-15 15z"/><path d="M5 19l9-9"/></svg></span>
+            </div>
+            <div class="project-body">
+              <h3>Verde Vivo</h3>
+              <p data-i18n="proj2.text">App de jardinagem que lembra quando regar cada planta, com sincronização na nuvem e lembretes gentis.</p>
+              <ul class="tags"><li>React Native</li><li>Firebase</li></ul>
+              <div class="project-actions"><a class="aero-btn aero-btn--sm" href="#" data-i18n="proj.view">Ver projeto</a><a class="aero-btn aero-btn--sm aero-btn--glass" href="#" data-i18n="proj.code">Código</a></div>
+            </div>
+            <span class="shine" aria-hidden="true"></span>
+          </article>
+
+          <article class="glass project" data-reveal style="--d:2">
+            <div class="thumb" style="--c1:#e6fbff;--c2:#4fb3ee">
+              <span class="t-bub" style="--x:12%;--y:30%;--s:22px;--dl:-2s"></span><span class="t-bub" style="--x:78%;--y:62%;--s:14px"></span>
+              <span class="orb t-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18z"/></svg></span>
+            </div>
+            <div class="project-body">
+              <h3>Nimbus UI</h3>
+              <p data-i18n="proj3.text">Biblioteca de componentes com estética glossy, totalmente acessível, temável e documentada.</p>
+              <ul class="tags"><li>TypeScript</li><li>Storybook</li><li>CSS</li></ul>
+              <div class="project-actions"><a class="aero-btn aero-btn--sm" href="#" data-i18n="proj.view">Ver projeto</a><a class="aero-btn aero-btn--sm aero-btn--glass" href="#" data-i18n="proj.code">Código</a></div>
+            </div>
+            <span class="shine" aria-hidden="true"></span>
+          </article>
+
+          <article class="glass project" data-reveal style="--d:3">
+            <div class="thumb" style="--c1:#8ef0ff;--c2:#1f7fd1">
+              <span class="t-bub" style="--x:18%;--y:64%;--s:16px;--dl:-3s"></span><span class="t-bub" style="--x:76%;--y:24%;--s:26px;--dl:-1s"></span><span class="t-bub" style="--x:62%;--y:74%;--s:10px"></span>
+              <span class="orb t-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg></span>
+            </div>
+            <div class="project-body">
+              <h3>Bolha Chat</h3>
+              <p data-i18n="proj4.text">Mensageiro em tempo real com mensagens que flutuam como bolhas e reações com física de líquido.</p>
+              <ul class="tags"><li>Node.js</li><li>WebSocket</li><li>Canvas</li></ul>
+              <div class="project-actions"><a class="aero-btn aero-btn--sm" href="#" data-i18n="proj.view">Ver projeto</a><a class="aero-btn aero-btn--sm aero-btn--glass" href="#" data-i18n="proj.code">Código</a></div>
+            </div>
+            <span class="shine" aria-hidden="true"></span>
+          </article>
+
+          <article class="glass project" data-reveal style="--d:4">
+            <div class="thumb" style="--c1:#fff1b8;--c2:#33a9e8">
+              <span class="t-hill"></span>
+              <span class="t-bub" style="--x:82%;--y:18%;--s:16px;--dl:-2s"></span>
+              <span class="orb t-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></span>
+            </div>
+            <div class="project-body">
+              <h3>Horizonte</h3>
+              <p data-i18n="proj5.text">Painel de clima com previsões animadas, mapas interativos e um céu que muda com a hora do dia.</p>
+              <ul class="tags"><li>Vue</li><li>D3</li><li>APIs</li></ul>
+              <div class="project-actions"><a class="aero-btn aero-btn--sm" href="#" data-i18n="proj.view">Ver projeto</a><a class="aero-btn aero-btn--sm aero-btn--glass" href="#" data-i18n="proj.code">Código</a></div>
+            </div>
+            <span class="shine" aria-hidden="true"></span>
+          </article>
+
+          <article class="glass project" data-reveal style="--d:5">
+            <div class="thumb" style="--c1:#c3b4ff;--c2:#2c6fe0">
+              <span class="t-bub" style="--x:16%;--y:24%;--s:12px;--dl:-1s"></span><span class="t-bub" style="--x:80%;--y:60%;--s:22px;--dl:-3s"></span>
+              <span class="orb t-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg></span>
+            </div>
+            <div class="project-body">
+              <h3>Ondas Sonoras</h3>
+              <p data-i18n="proj6.text">Visualizador de áudio que transforma músicas em ondas, partículas e reflexos de vidro.</p>
+              <ul class="tags"><li>Web Audio</li><li>Canvas</li></ul>
+              <div class="project-actions"><a class="aero-btn aero-btn--sm" href="#" data-i18n="proj.view">Ver projeto</a><a class="aero-btn aero-btn--sm aero-btn--glass" href="#" data-i18n="proj.code">Código</a></div>
+            </div>
+            <span class="shine" aria-hidden="true"></span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HABILIDADES ================= -->
+    <section class="view view-page" id="habilidades" data-view="habilidades" data-title="Habilidades" aria-labelledby="t-habilidades">
+      <div class="page">
+        <div class="page-head">
+          <button class="back-orb" type="button" data-back aria-label="Voltar ao menu" data-i18n-attr="aria-label:ui.back">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H6M11 6l-6 6 6 6"/></svg>
+          </button>
+          <h2 class="page-title" id="t-habilidades" tabindex="-1"><span class="page-num">03</span><span data-split data-i18n="nav.habilidades">Habilidades</span></h2>
+        </div>
+
+        <div class="skills">
+          <div class="glass card-pad" data-reveal style="--d:0">
+            <p class="section-label"><span data-i18n="skills.label">Aquário de habilidades</span> <span class="muted small" data-i18n="skills.hint">— passe o mouse, clique nas bolhas</span></p>
+            <div class="bubble-field">
+              <button class="skill-bubble" type="button" style="--s:132px">HTML &amp; CSS</button>
+              <button class="skill-bubble" type="button" style="--s:122px">JavaScript</button>
+              <button class="skill-bubble is-green" type="button" style="--s:110px">React</button>
+              <button class="skill-bubble" type="button" style="--s:106px">Figma</button>
+              <button class="skill-bubble is-green" type="button" style="--s:96px">TypeScript</button>
+              <button class="skill-bubble" type="button" style="--s:92px">UI/UX</button>
+              <button class="skill-bubble is-green" type="button" style="--s:86px">Node.js</button>
+              <button class="skill-bubble" type="button" style="--s:82px">Motion</button>
+              <button class="skill-bubble" type="button" style="--s:74px">Git</button>
+              <button class="skill-bubble is-green" type="button" style="--s:70px">WebGL</button>
+            </div>
+          </div>
+
+          <div class="glass card-pad" data-reveal style="--d:1">
+            <div class="bar-group">
+              <p class="section-label" data-i18n="skills.front">Front-end</p>
+              <div class="bar"><div class="bar-top"><span>HTML &amp; CSS</span><span>95%</span></div><div class="vbar"><i style="--v:95%;--d:0"></i></div></div>
+              <div class="bar"><div class="bar-top"><span>JavaScript</span><span>90%</span></div><div class="vbar"><i style="--v:90%;--d:1"></i></div></div>
+              <div class="bar"><div class="bar-top"><span>React</span><span>82%</span></div><div class="vbar"><i style="--v:82%;--d:2"></i></div></div>
+              <div class="bar"><div class="bar-top"><span>TypeScript</span><span>78%</span></div><div class="vbar"><i style="--v:78%;--d:3"></i></div></div>
+            </div>
+            <div class="bar-group">
+              <p class="section-label" data-i18n="skills.design">Design</p>
+              <div class="bar"><div class="bar-top"><span>Figma</span><span>88%</span></div><div class="vbar vbar--aqua"><i style="--v:88%;--d:4"></i></div></div>
+              <div class="bar"><div class="bar-top"><span>UI/UX</span><span>84%</span></div><div class="vbar vbar--aqua"><i style="--v:84%;--d:5"></i></div></div>
+              <div class="bar"><div class="bar-top"><span data-i18n="skills.motion">Motion design</span><span>76%</span></div><div class="vbar vbar--aqua"><i style="--v:76%;--d:6"></i></div></div>
+            </div>
+            <div class="bar-group">
+              <p class="section-label" data-i18n="skills.tools">Ferramentas</p>
+              <div class="bar"><div class="bar-top"><span>Git</span><span>85%</span></div><div class="vbar"><i style="--v:85%;--d:7"></i></div></div>
+              <div class="bar"><div class="bar-top"><span>Node.js</span><span>70%</span></div><div class="vbar"><i style="--v:70%;--d:8"></i></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CONTATO ================= -->
+    <section class="view view-page" id="contato" data-view="contato" data-title="Contato" aria-labelledby="t-contato">
+      <div class="page">
+        <div class="page-head">
+          <button class="back-orb" type="button" data-back aria-label="Voltar ao menu" data-i18n-attr="aria-label:ui.back">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H6M11 6l-6 6 6 6"/></svg>
+          </button>
+          <h2 class="page-title" id="t-contato" tabindex="-1"><span class="page-num">04</span><span data-split data-i18n="nav.contato">Contato</span></h2>
+        </div>
+
+        <div class="contact">
+          <form class="glass card-pad form" id="contact-form" data-reveal style="--d:0" novalidate>
+            <p class="section-label" data-i18n="contact.label">Mande uma mensagem</p>
+            <div class="form-row">
+              <div class="field"><label for="f-nome" data-i18n="contact.name">Nome</label><input class="input" id="f-nome" name="nome" autocomplete="name" placeholder="Como posso te chamar?" data-i18n-attr="placeholder:contact.namePh" required></div>
+              <div class="field"><label for="f-email" data-i18n="contact.email">E-mail</label><input class="input" id="f-email" name="email" type="email" autocomplete="email" placeholder="voce@email.com" data-i18n-attr="placeholder:contact.emailPh" required></div>
+            </div>
+            <div class="field"><label for="f-msg" data-i18n="contact.msg">Mensagem</label><textarea class="input" id="f-msg" name="mensagem" placeholder="Conte sobre seu projeto, ideia ou proposta…" data-i18n-attr="placeholder:contact.msgPh" required></textarea></div>
+            <div><button class="aero-btn" type="submit"><span data-i18n="contact.send">Enviar mensagem</span> <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-3-7z"/></svg></button></div>
+          </form>
+
+          <div class="glass card-pad" data-reveal style="--d:1">
+            <p class="section-label" data-i18n="contact.find">Me encontre por aí</p>
+            <ul class="socials">
+              <li><a class="social" href="mailto:seuemail@exemplo.com" data-email-link><span class="orb"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span><span><strong>E-mail</strong><small data-email-text>seuemail@exemplo.com</small></span></a></li>
+              <li><a class="social" href="#" target="_blank" rel="noopener"><span class="orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></span><span><strong>GitHub</strong><small>@LuisAugusto2005</small></span></a></li>
+              <li><a class="social" href="#" target="_blank" rel="noopener"><span class="orb"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 10.5V17M8 7.2v.1M12 17v-6.5M12 13.5a2.5 2.5 0 0 1 5 0V17"/></svg></span><span><strong>LinkedIn</strong><small>/in/LuisAugusto</small></span></a></li>
+              <li><a class="social" href="#" target="_blank" rel="noopener"><span class="orb orb--green"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5v.1"/></svg></span><span><strong>Instagram</strong><small>@lu1s_august0</small></span></a></li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="page-foot" data-i18n="foot">© 2026 Seu Nome · feito com vidro, bolhas e muito céu azul</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ====== Transição em onda ====== -->
+  <svg class="wave-svg" aria-hidden="true"></svg>
+  <div class="wave-caption" aria-hidden="true"><span></span></div>
+
+  <div class="toast glass" role="status" aria-live="polite"><span class="orb" aria-hidden="true"></span><span class="toast-msg"></span></div>
+
+  <script src="assets/js/i18n.js" defer></script>
+  <script src="assets/js/background.js" defer></script>
+  <script src="assets/js/liquid.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
+</body>
+</html>
